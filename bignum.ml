@@ -27,30 +27,60 @@ Problem 1: Negation
 ......................................................................*)
   
 let negate (b : bignum) : bignum =
-  failwith "negate not implemented" ;;
+  match b with
+  | {neg = bl; coeffs = []} -> b
+  | {neg = bl; coeffs = n} -> {neg = not bl ; coeffs = n} ;;
 
 (*......................................................................
 Problem 2: Comparing bignums
 ......................................................................*)  
   
 let equal (b1 : bignum) (b2 : bignum) : bool =
-  failwith "equal not implemented" ;;
+  match b1, b2 with
+  | {neg = bl ; coeffs = n}, {neg = bl2 ; coeffs = n2} -> (bl = bl2) && (n = n2) ;;
 
 let less (b1 : bignum) (b2 : bignum) : bool =
-  failwith "less not implemented" ;;
+  if b1.neg <> b2.neg then b1.neg 
+  else let (l1, l2) = (List.length b1.coeffs, List.length b2.coeffs) in
+    if b1.neg = false then 
+      if l1 < l2 then true 
+      else if l1 = l2 then b1.coeffs < b2.coeffs
+      else false
+    else 
+      if l1 > l2 then true 
+      else if l1 = l2 then b1.coeffs > b2.coeffs
+      else false ;;
 
+
+(*Less checks if b1 < b2, so I can just call less in greater but
+reverse the two numbers to check for greater
+*)
 let greater (b1 : bignum) (b2 : bignum) : bool =
-  failwith "greater not implemented" ;;
+  less b2 b1 ;;
 
 (*......................................................................
 Problem 3: Converting to and from bignums
 ......................................................................*)
+let rec from_int_helper (n : int) : int list =
+  match n with
+  | 0 -> []
+  | _ -> from_int_helper (n/cBASE) @ [abs (n mod cBASE)]
 
 let from_int (n : int) : bignum =
-  failwith "from_int not implemented" ;;
+  if n < 0 then {neg = true ; coeffs = from_int_helper n}
+  else {neg = false ; coeffs = from_int_helper n} ;;
 
 let to_int (b : bignum) : int option =
-  failwith "to_int not implemented" ;;
+  if less (from_int max_int) b || less b (from_int min_int) then None
+  else 
+    let rec to_int_help (lst : int list) : int =
+      match lst with
+      | [] -> 0
+      | hd::tl -> hd + cBASE*(to_int_help tl)
+    in 
+    if b.neg then Some ((~-) (to_int_help (List.rev b.coeffs)))
+    else Some (to_int_help (List.rev b.coeffs)) ;;
+
 
 (*......................................................................
 Helpful functions (not to be used in problems 1 to 3)
@@ -206,7 +236,14 @@ your implementation preserves the bignum invariant.
 ......................................................................*)
 
 let plus (b1 : bignum) (b2 : bignum) : bignum =
-  failwith "plus not implemented" ;;
+  if b1.neg && b2.neg then negate (plus_pos (negate b1) (negate b2))
+  else if not b1.neg && not b2.neg then (plus_pos b1 b2)
+  else if b1.neg && not b2.neg then 
+    if less (negate b1) b2 then (plus_pos b1 b2)
+    else negate (plus_pos (negate b1) (negate b2))
+  else 
+    if greater b1 (negate b2) then (plus_pos b1 b2)
+    else negate (plus_pos (negate b1) (negate b2)) ;;
 
 (*......................................................................
 Problem 5
